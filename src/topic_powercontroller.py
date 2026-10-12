@@ -254,7 +254,7 @@ class TopicPowerController:
         meters_raw = self._get("/meters")
         probes_raw = self._get("/tempprobes")
         prices_raw = self._get("/energyprices")
-        ups_raw = self._get_ups()
+        ups_raw = self._get("/ups")
 
         outputs = _parse_outputs(outputs_raw if isinstance(outputs_raw, dict) else {})
         meters = _parse_meters(meters_raw if isinstance(meters_raw, dict) else {})
@@ -285,20 +285,6 @@ class TopicPowerController:
                 "current_status_icon": current_price.get("status_icon", " "),
                 "forecast": forecast,
             }
-
-    def _get_ups(self) -> Any:
-        """Fetch /ups, tolerating older PowerController versions without that endpoint.
-
-        Returns:
-            The JSON response, or an empty dict if the endpoint is unavailable.
-        """
-        try:
-            return self._get("/ups")
-        except requests.exceptions.HTTPError as e:
-            if not self._ups_endpoint_warned:
-                self._logger.log_message(f"PowerController /ups endpoint unavailable: {e}", "warning")
-                self._ups_endpoint_warned = True
-            return {}
 
     def _get(self, endpoint: str) -> Any:
         url = self._base_url + endpoint
