@@ -71,7 +71,7 @@ TopicWeather:
 # Configure the base URL and port to query a PowerController DataAPI service. This app will automatically add the relevant endpoints to the base URL (e.g. http://localhost:8081/outputs)
 TopicPowerController:
   RefreshIntervalSec: 10  # How often to refresh the power controller data (in seconds). 
-  DataAPIBaseURL: "http://192.168.86.36:8081"  # The API endpoint to fetch power controller data from. 
+  DataAPIBaseURL: "http://192.168.86.47:8081"  # The API endpoint to fetch power controller data from. 
   AccessKey:        # Access key for the power controller API if needed. Can also be set in the PC_DATAAPI_ACCESS_KEY environment variable.
 
 

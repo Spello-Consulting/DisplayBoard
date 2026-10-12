@@ -137,6 +137,20 @@ function setText(id, value, fallback = "—") {
     if (el) el.textContent = (value !== null && value !== undefined) ? value : fallback;
 }
 
+// ── Utility: format an energy price (cents/kWh) ────────────────────────────
+// Prices arrive in cents. When the magnitude is more than 99c, show dollars
+// and cents (e.g. 2637 → "$26.37"); otherwise show cents to `decimals` places.
+// Returns { value, isDollars } for a valid price, or null when absent.
+
+function formatEnergyPrice(cents, decimals = 0) {
+    if (cents === null || cents === undefined || isNaN(cents)) return null;
+    if (Math.abs(cents) > 99) {
+        const sign = cents < 0 ? "-" : "";
+        return { value: `${sign}$${(Math.abs(cents) / 100).toFixed(2)}`, isDollars: true };
+    }
+    return { value: cents.toFixed(decimals), isDollars: false };
+}
+
 function setImage(id, url, alt = "") {
     const el = document.getElementById(id);
     if (!el) return;

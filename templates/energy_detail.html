@@ -81,7 +81,7 @@
             <div class="energy-current">
                 <span class="energy-icon" id="energy-icon"> </span>
                 <span class="energy-rate" id="energy-rate">--</span>
-                <span class="energy-unit">¢/kWh</span>
+                <span class="energy-unit" id="energy-unit">¢/kWh</span>
             </div>
     </div>
 
@@ -202,21 +202,24 @@ BoardClient.onTopic("weather_current", (data) => {
 BoardClient.onTopic("amber_energy", (data) => {
     if (!data.connected) return;
 
-    const price = data.current_price;
-    setText("energy-rate", price !== null && price !== undefined ? price.toFixed(1) : null);
+    const current = formatEnergyPrice(data.current_price, 1);
+    setText("energy-rate", current ? current.value : null);
+    setText("energy-unit", current && current.isDollars ? "/kWh" : "¢/kWh", "¢/kWh");
     setText("energy-icon", data.current_status_icon || " ");
 
     const container = document.getElementById("energy-forecast");
     if (container && Array.isArray(data.forecast)) {
-        container.innerHTML = data.forecast.slice(0, 16).map(f => `
+        container.innerHTML = data.forecast.slice(0, 16).map(f => {
+            const p = formatEnergyPrice(f.price, 1);
+            return `
             <div class="forecast-slot-wrap">
                 <div class="forecast-row">
                     <span class="forecast-icon">${f.status_icon || " "}</span>
-                    <span class="forecast-rate">${f.price !== null && f.price !== undefined ? f.price.toFixed(1) + "¢" : "--"}</span>
+                    <span class="forecast-rate">${p ? p.value + (p.isDollars ? "" : "¢") : "--"}</span>
                 </div>
                 <div class="forecast-time">${f.time || "--"}</div>
             </div>
-        `).join("");
+        `;}).join("");
     }
 });
 
