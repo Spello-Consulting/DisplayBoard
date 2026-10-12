@@ -102,6 +102,23 @@
                 <span class="home-value" id="wan-on-primary">All Good!</span>
             </div>
         </div>
+        <div id="home-ups-section" style="display: none;">
+            <div class="topic-label" id="ups-name">UPS</div>
+            <div id="home-ups">
+                <div class="home-row">
+                    <span class="home-label">Battery</span>
+                    <span class="home-value" id="ups-charge">--</span>
+                </div>
+                <div class="home-row">
+                    <span class="home-label">Runtime</span>
+                    <span class="home-value" id="ups-runtime">--</span>
+                </div>
+                <div class="home-row">
+                    <span class="home-label" id="ups-state">--</span>
+                    <span class="home-value" id="ups-healthy">--</span>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- ── Hourly Forecast ────────────────────────────────────────────── -->
@@ -219,6 +236,22 @@ BoardClient.onTopic("powercontroller", (data) => {
         `).join("");
     }
 
+    // UPS — the UPS selected via TopicPowerController.UPSName
+    const upsSection = document.getElementById("home-ups-section");
+    const ups = data.ups_selected;
+    if (upsSection) {
+        upsSection.style.display = ups ? "" : "none";
+        if (ups) {
+            setText("ups-name", ups.name || "UPS");
+            setText("ups-charge", ups.charge_percent !== null ? `${ups.charge_percent}%` : "—");
+            setText("ups-runtime", ups.runtime);
+            const state = ups.battery_state || "unknown";
+            setText("ups-state", state.charAt(0).toUpperCase() + state.slice(1));
+            setText("ups-healthy", ups.is_healthy ? "✅" : "⚠️");
+            const el = document.getElementById("ups-healthy");
+            if (el) el.className = ups.is_healthy ? "home-value" : "home-value-blink";
+        }
+    }
 });
 
 // ── WANFailoverCheck ──────────────────────────────────────────────────────

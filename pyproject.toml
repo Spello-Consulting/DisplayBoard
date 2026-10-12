@@ -1,6 +1,6 @@
 [project]
 name = "displayboard"
-version = "1.0.4"
+version = "1.0.5"
 description = "Display one of more boards on a client browser"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -33,4 +33,9 @@ remote="~/Library/CloudStorage/Dropbox/Development/dev_setup/app_config/DisplayB
 patterns = [
     "google_credentials.json",
     "tokens/*",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
 ]

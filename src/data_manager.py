@@ -110,10 +110,12 @@ class DataManager:
             )
             refresh_sec_raw = config.get("TopicPowerController", "RefreshIntervalSec", default=10) or 10
             refresh_sec = int(refresh_sec_raw) if not isinstance(refresh_sec_raw, dict) else 10
+            ups_name_raw = config.get("TopicPowerController", "UPSName", default=None)
             self._modules["pc"] = TopicPowerController(
                 base_url=str(pc_url),
                 access_key=pc_key if not isinstance(pc_key, dict) else None,
                 refresh_interval_sec=refresh_sec,
+                ups_name=str(ups_name_raw) if isinstance(ups_name_raw, str) and ups_name_raw else None,
                 on_update=notify_normal,
                 logger=self._logger,
             )

@@ -97,6 +97,7 @@ class ConfigSchema:
                     "RefreshIntervalSec": {"type": "number", "required": False, "nullable": True, "min": 1, "max": 1440},
                     "DataAPIBaseURL": {"type": "string", "required": True},
                     "AccessKey": {"type": "string", "required": False, "nullable": True},
+                    "UPSName": {"type": "string", "required": False, "nullable": True},
                 },
             },
 
