@@ -124,7 +124,7 @@
 
 <script src="/static/board.js"></script>
 <script id="board-config" type="application/json">
-{{ {"board_name": board_name, "auto_rotate_sec": auto_rotate_sec} | tojson }}
+{{ {"board_name": board_name, "auto_rotate_sec": auto_rotate_sec, "browser_refresh_sec": browser_refresh_sec} | tojson }}
 </script>
 <script>
 const BOARD_CONFIG = JSON.parse(document.getElementById("board-config").textContent);
@@ -136,6 +136,9 @@ const AUTO_ROTATE_SEC = BOARD_CONFIG.auto_rotate_sec;
 if (AUTO_ROTATE_SEC > 0 && !new URLSearchParams(location.search).has('board')) {
     setTimeout(() => location.reload(), AUTO_ROTATE_SEC * 1000);
 }
+
+// ── Forced browser refresh (defeats stale kiosk browser caches) ──────────────
+scheduleBrowserRefresh(BOARD_CONFIG.browser_refresh_sec);
 
 // ── DateTime ─────────────────────────────────────────────────────────────
 BoardClient.onTopic("datetime", (data) => {

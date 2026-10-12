@@ -28,6 +28,7 @@ class ConfigSchema:
                     "Port": {"type": "number", "required": False, "nullable": True, "min": 80, "max": 65535},
                     "DebugMode": {"type": "boolean", "required": False, "nullable": True},
                     "AccessKey": {"type": "string", "required": False, "nullable": True},
+                    "BrowserRefresh": {"type": "number", "required": False, "nullable": True, "min": 0, "max": 86400},
                 },
             },
 

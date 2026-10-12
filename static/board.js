@@ -130,6 +130,29 @@ function _boardCount() {
 }
 
 
+// ── Forced browser refresh ──────────────────────────────────────────────────
+// Some kiosk browsers (e.g. NetKiosk) serve stale cached copies of the page.
+// Every `intervalSec` seconds, reload the page from the server with a
+// cache-busting query parameter. The server is checked first so that a brief
+// outage doesn't leave the kiosk stuck on a browser error page.
+
+function scheduleBrowserRefresh(intervalSec) {
+    if (!(intervalSec > 0)) return;
+    setTimeout(async function refresh() {
+        const url = new URL(location.href);
+        url.searchParams.set("_refresh", Date.now());
+        try {
+            const resp = await fetch(url, { cache: "no-store" });
+            if (resp.ok) {
+                location.replace(url);
+                return;
+            }
+        } catch { /* server unreachable — try again next interval */ }
+        setTimeout(refresh, intervalSec * 1000);
+    }, intervalSec * 1000);
+}
+
+
 // ── Utility: set text content of an element safely ─────────────────────────
 
 function setText(id, value, fallback = "—") {

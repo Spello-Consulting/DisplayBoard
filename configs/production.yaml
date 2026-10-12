@@ -12,6 +12,7 @@ Website:
   Port: 8082            # Port to host the web interface on.
   DebugMode: False      # If True, an exceptions will be reported via the web brower. Set to True for testing, False for a production deployment.
   AccessKey:            # Access key for the web interface. Set to an empty string to disable access control. Can also be set in the WEBSITE_ACCESS_KEY environment variable.
+  BrowserRefresh: 3600  # Force the browser to reload the page (bypassing its cache) every N seconds. Useful for kiosk browsers such as NetKiosk that cache old content. Set to 0 or leave blank to disable.
 
 
 Files:

@@ -45,6 +45,21 @@ def _get_weather_icons_root() -> Path:
     return Path(sc_weather.__file__).resolve().parent / "weather_icons"
 
 
+def _get_int_setting(config: SCConfigManager, section: str, key: str) -> int:
+    """Return an integer config setting, treating a blank or missing value as 0.
+
+    Args:
+        config: The application configuration manager.
+        section: The config section name, e.g. "Website".
+        key: The setting name within the section.
+
+    Returns:
+        The setting as an int, or 0 if it is not set.
+    """
+    raw = config.get(section, key, default=0) or 0
+    return int(raw) if not isinstance(raw, dict) else 0
+
+
 def _validate_access_key(config: SCConfigManager, logger: SCLogger, key_from_request: str | None) -> bool:
     expected_key = os.environ.get("WEBAPP_ACCESS_KEY")
     if not expected_key:
@@ -152,8 +167,8 @@ def _register_routes(app: FastAPI, controller: AppController, config: SCConfigMa
         # ?board=<index> selects by zero-based position in DisplayBoards.Boards list.
         boards_raw = config.get("DisplayBoards", "Boards", default=[]) or []
         boards: list = boards_raw if isinstance(boards_raw, list) else []
-        auto_rotate_raw = config.get("DisplayBoards", "AutoRotateSec", default=0) or 0
-        auto_rotate_sec = int(auto_rotate_raw) if not isinstance(auto_rotate_raw, dict) else 0
+        auto_rotate_sec = _get_int_setting(config, "DisplayBoards", "AutoRotateSec")
+        browser_refresh_sec = _get_int_setting(config, "Website", "BrowserRefresh")
         requested_board = request.query_params.get("board")
         if requested_board is None and auto_rotate_sec > 0 and boards:
             board_index = int(asyncio.get_running_loop().time() // auto_rotate_sec) % len(boards)
@@ -180,6 +195,7 @@ def _register_routes(app: FastAPI, controller: AppController, config: SCConfigMa
                 "board_index": board_index,
                 "board_count": len(boards),
                 "auto_rotate_sec": auto_rotate_sec,
+                "browser_refresh_sec": browser_refresh_sec,
             },
         )
 
@@ -255,16 +271,19 @@ def create_asgi_app(controller: AppController, config: SCConfigManager, logger: 
 
     app = FastAPI(lifespan=lifespan)
 
-    # Add middleware to disable caching in debug mode for instant CSS updates
-    if debug_mode:
-        @app.middleware("http")
-        async def disable_static_cache(request: Request, call_next):
-            response = await call_next(request)
-            if request.url.path.startswith("/static/"):
-                response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-                response.headers["Pragma"] = "no-cache"
-                response.headers["Expires"] = "0"
-            return response
+    # Stop browsers (notably kiosk apps such as NetKiosk) from showing a stale cached copy of the board page.
+    # Static assets are always revalidated, and never cached in debug mode for instant CSS updates.
+    @app.middleware("http")
+    async def set_cache_headers(request: Request, call_next):
+        response = await call_next(request)
+        path = request.url.path
+        if path == "/" or (debug_mode and path.startswith("/static/")):
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+        elif path.startswith("/static/"):
+            response.headers["Cache-Control"] = "no-cache"
+        return response
 
     # Serve packaged weather icons directly from the installed dependency.
     app.mount("/weather_icons", StaticFiles(directory=str(_get_weather_icons_root())), name="weather_icons")
