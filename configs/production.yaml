@@ -73,6 +73,7 @@ TopicPowerController:
   RefreshIntervalSec: 10  # How often to refresh the power controller data (in seconds). 
   DataAPIBaseURL: "http://192.168.86.36:8081"  # The API endpoint to fetch power controller data from. 
   AccessKey:        # Access key for the power controller API if needed. Can also be set in the PC_DATAAPI_ACCESS_KEY environment variable.
+  UPSName: "Eaton 5E UPS"  # Name of the UPS (as reported by the PowerController /ups endpoint) to show on display boards. If blank, the first UPS is used.
 
 
 # Configure a connection to the WAN Failover Check service which reports the status of our WAN connection

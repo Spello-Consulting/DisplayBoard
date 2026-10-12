@@ -1,4 +1,4 @@
-"""PowerController topic — polls the PC DataAPI for outputs, meters, probes, and energy prices."""
+"""PowerController topic — polls the PC DataAPI for outputs, meters, probes, UPS status, and energy prices."""
 from __future__ import annotations
 
 import threading
@@ -75,6 +75,78 @@ def _parse_probes(data: dict) -> list[dict]:
     return results
 
 
+def _format_runtime(seconds: int | None) -> str:
+    """Format a battery runtime in seconds as a short human-readable string.
+
+    Args:
+        seconds: Runtime in seconds, or None if unknown.
+
+    Returns:
+        A string such as "18m", "1h 05m", or "—" if unknown.
+    """
+    if seconds is None or seconds < 0:
+        return "—"
+    hours, remainder = divmod(int(seconds), 3600)
+    minutes = remainder // 60
+    if hours:
+        return f"{hours}h {minutes:02d}m"
+    return f"{minutes}m"
+
+
+def _parse_ups(data: dict[str, Any]) -> list[dict[str, Any]]:
+    """Parse the /ups DataAPI response into a list of UPS dicts.
+
+    Args:
+        data: The JSON response from the /ups endpoint, containing a "UPS" list.
+
+    Returns:
+        A list of normalised UPS dicts.
+    """
+    results: list[dict[str, Any]] = []
+    for item in data.get("UPS", []):
+        charge_raw = item.get("BatteryChargePercent")
+        runtime_raw = item.get("BatteryRuntimeSeconds")
+        runtime_sec = int(runtime_raw) if runtime_raw is not None else None
+        timestamp_raw = item.get("Timestamp", "")
+        display_time = ""
+        if timestamp_raw:
+            try:
+                display_time = datetime.fromisoformat(timestamp_raw).strftime("%I:%M %p").lstrip("0")
+            except (ValueError, TypeError):
+                display_time = ""
+        results.append({
+            "name": item.get("UPSName", ""),
+            "timestamp": timestamp_raw,
+            "time": display_time,
+            "charge_percent": round(float(charge_raw)) if charge_raw is not None else None,
+            "runtime_sec": runtime_sec,
+            "runtime": _format_runtime(runtime_sec),
+            "battery_state": str(item.get("BatteryState", "") or ""),
+            "is_healthy": bool(item.get("IsHealthy", False)),
+        })
+    return results
+
+
+def _select_ups(ups_list: list[dict[str, Any]], ups_name: str | None) -> dict[str, Any] | None:
+    """Pick the configured UPS from the list.
+
+    Args:
+        ups_list: Parsed UPS dicts.
+        ups_name: The configured UPS name. If None/empty, the first UPS is used.
+
+    Returns:
+        The matching UPS dict, or None if there is no match.
+    """
+    if not ups_list:
+        return None
+    if not ups_name:
+        return ups_list[0]
+    for ups in ups_list:
+        if ups["name"].casefold() == ups_name.casefold():
+            return ups
+    return None
+
+
 def _parse_energy_prices(data: dict) -> tuple[dict, list[dict]]:
     """Return (current_price_dict, forecast_list)."""
     current: dict = {}
@@ -124,7 +196,7 @@ def _parse_energy_prices(data: dict) -> tuple[dict, list[dict]]:
 
 
 class TopicPowerController:
-    """Polls the PowerController DataAPI and exposes outputs, meters, probes, and energy prices."""
+    """Polls the PowerController DataAPI and exposes outputs, meters, probes, UPS status, and energy prices."""
 
     def __init__(
         self,
@@ -133,15 +205,19 @@ class TopicPowerController:
         logger: SCLogger,
         access_key: str | None = None,
         refresh_interval_sec: int = 10,
+        ups_name: str | None = None,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._access_key = access_key
         self._on_update = on_update
         self._logger = logger
         self._refresh_secs = max(5, int(refresh_interval_sec))
+        self._ups_name = ups_name or None
+        self._ups_name_warned = False
+        self._ups_endpoint_warned = False
 
         self._lock = threading.Lock()
-        self._pc_data: dict = {"connected": False, "outputs": [], "meters": [], "probes": []}
+        self._pc_data: dict = {"connected": False, "outputs": [], "meters": [], "probes": [], "ups": [], "ups_selected": None}
         self._amber_data: dict = {"connected": False, "current_price": None, "current_status": "medium", "current_status_icon": "🟡", "forecast": []}
 
     def get_data(self) -> dict:
@@ -178,10 +254,19 @@ class TopicPowerController:
         meters_raw = self._get("/meters")
         probes_raw = self._get("/tempprobes")
         prices_raw = self._get("/energyprices")
+        ups_raw = self._get("/ups")
 
         outputs = _parse_outputs(outputs_raw if isinstance(outputs_raw, dict) else {})
         meters = _parse_meters(meters_raw if isinstance(meters_raw, dict) else {})
         probes = _parse_probes(probes_raw if isinstance(probes_raw, dict) else {})
+        ups = _parse_ups(ups_raw if isinstance(ups_raw, dict) else {})
+        ups_selected = _select_ups(ups, self._ups_name)
+        if self._ups_name and ups and ups_selected is None and not self._ups_name_warned:
+            self._logger.log_message(
+                f"PowerController UPS '{self._ups_name}' not found in /ups data "
+                f"(available: {', '.join(u['name'] for u in ups)})", "warning"
+            )
+            self._ups_name_warned = True
         current_price, forecast = _parse_energy_prices(prices_raw if isinstance(prices_raw, dict) else {})
 
         with self._lock:
@@ -190,6 +275,8 @@ class TopicPowerController:
                 "outputs": outputs,
                 "meters": meters,
                 "probes": probes,
+                "ups": ups,
+                "ups_selected": ups_selected,
             }
             self._amber_data = {
                 "connected": True,
