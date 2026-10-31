@@ -98,6 +98,7 @@ class ConfigSchema:
                     "DataAPIBaseURL": {"type": "string", "required": True},
                     "AccessKey": {"type": "string", "required": False, "nullable": True},
                     "UPSName": {"type": "string", "required": False, "nullable": True},
+                    "TempProbeMaxAgeHours": {"type": "number", "required": False, "nullable": True, "min": 0, "max": 168},
                 },
             },
 

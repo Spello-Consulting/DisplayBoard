@@ -75,6 +75,7 @@ TopicPowerController:
   DataAPIBaseURL: "http://localhost:8081"  # The API endpoint to fetch power controller data from. 
   AccessKey:        # Access key for the power controller API if needed. Can also be set in the PC_DATAAPI_ACCESS_KEY environment variable.
   UPSName: "Eaton 5E UPS"  # Name of the UPS (as reported by the PowerController /ups endpoint) to show on display boards. If blank, the first UPS is used.
+  TempProbeMaxAgeHours: 2  # Blank a temperature probe's reading on the display if its latest reading is older than this many hours. Set to 0 to always show the reading. Defaults to 2 if blank.
 
 
 # WAN failover status check. Queries a REST API that returns WAN status (primary vs backup connection).
