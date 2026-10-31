@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import hashlib
 import json
 import os
 from contextlib import asynccontextmanager
@@ -43,6 +44,23 @@ def _get_repo_root() -> Path:
 
 def _get_weather_icons_root() -> Path:
     return Path(sc_weather.__file__).resolve().parent / "weather_icons"
+
+
+def _get_static_version(static_dir: Path) -> str:
+    """Return a short hash of the board's script and stylesheet.
+
+    Templates add this to their /static URLs, so a browser can't keep using an old cached copy after a deployment.
+
+    Args:
+        static_dir: The directory holding board.js and styles.css.
+
+    Returns:
+        A hash that changes whenever either file changes.
+    """
+    digest = hashlib.sha256()
+    for file_name in ("board.js", "styles.css"):
+        digest.update((static_dir / file_name).read_bytes())
+    return digest.hexdigest()[:12]
 
 
 def _get_int_setting(config: SCConfigManager, section: str, key: str) -> int:
@@ -149,6 +167,7 @@ def _configure_app_state(
     app.state.config = config
     app.state.logger = logger
     app.state.templates = templates
+    app.state.static_version = _get_static_version(_get_repo_root() / "static")
 
 
 def _register_routes(app: FastAPI, controller: AppController, config: SCConfigManager, logger: SCLogger, templates: Jinja2Templates, manager: ConnectionManager, notifier: WebAppNotifier) -> None:
@@ -196,6 +215,7 @@ def _register_routes(app: FastAPI, controller: AppController, config: SCConfigMa
                 "board_count": len(boards),
                 "auto_rotate_sec": auto_rotate_sec,
                 "browser_refresh_sec": browser_refresh_sec,
+                "static_version": app.state.static_version,
             },
         )
 
