@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>{{ board_name | default("DisplayBoard") }}</title>
-    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/styles.css?v={{ static_version }}">
     <style>
         /* Board 1: main layout — 3-column grid, iPad landscape */
         .board {
@@ -185,7 +185,7 @@
 
 </div>
 
-<script src="/static/board.js"></script>
+<script src="/static/board.js?v={{ static_version }}"></script>
 <script id="board-config" type="application/json">
 {{ {"board_name": board_name, "auto_rotate_sec": auto_rotate_sec, "browser_refresh_sec": browser_refresh_sec} | tojson }}
 </script>
@@ -199,9 +199,6 @@ const AUTO_ROTATE_SEC = BOARD_CONFIG.auto_rotate_sec;
 if (AUTO_ROTATE_SEC > 0 && !new URLSearchParams(location.search).has('board')) {
     setTimeout(() => location.reload(), AUTO_ROTATE_SEC * 1000);
 }
-
-// ── Forced browser refresh (defeats stale kiosk browser caches) ──────────────
-scheduleBrowserRefresh(BOARD_CONFIG.browser_refresh_sec);
 
 // ── DateTime ─────────────────────────────────────────────────────────────
 BoardClient.onTopic("datetime", (data) => {
@@ -360,6 +357,10 @@ BoardClient.onTopic("background_images", (data) => {
         document.getElementById("background").style.backgroundImage = `url('${url}')`;
     }
 });
+
+// ── Forced browser refresh (defeats stale kiosk browser caches) ──────────────
+// Keep this after the topic handlers: an error here must not stop them being registered.
+scheduleBrowserRefresh(BOARD_CONFIG.browser_refresh_sec);
 </script>
 </body>
 </html>
