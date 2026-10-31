@@ -16,6 +16,10 @@ The PowerController topic also polls the DataAPI `/ups` endpoint. Each poll adds
 
 The board page adds a hash of `board.js` and `styles.css` to their URLs (`/static/board.js?v=...`), calculated when the app starts. A browser therefore loads the new files straight after a deployment, even if it holds an old cached copy. A new template should link to these files the same way, and should call `scheduleBrowserRefresh()` after its topic handlers.
 
+## Stale temperature probe readings
+
+The PowerController DataAPI reports a `LastReadingTime` for each temperature probe. If a probe's latest reading is older than `TopicPowerController.TempProbeMaxAgeHours` (2 hours by default), its `temperature` is sent to boards as `null` and the board shows `—` in place of the reading. Set `TempProbeMaxAgeHours` to 0 to always show the reading. A probe with no `LastReadingTime` is always shown.
+
 Run the tests with:
 
 ```bash

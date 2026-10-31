@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 import requests
@@ -63,10 +63,42 @@ def _parse_meters(data: dict) -> list[dict]:
     return results
 
 
-def _parse_probes(data: dict) -> list[dict]:
-    results = []
+def _is_reading_stale(timestamp_raw: str | None, max_age_hours: float, time_now: datetime) -> bool:
+    """Decide whether a temperature probe reading is too old to display.
+
+    Args:
+        timestamp_raw: The ISO format time of the reading. A timestamp without a timezone is taken as local time.
+        max_age_hours: The maximum age of a reading in hours. Zero disables the check.
+        time_now: The current timezone aware time.
+
+    Returns:
+        True if the reading is older than max_age_hours. A missing or unparseable timestamp is not treated as stale.
+    """
+    if not max_age_hours or not timestamp_raw:
+        return False
+    try:
+        reading_time = datetime.fromisoformat(timestamp_raw).astimezone()
+    except (ValueError, TypeError):
+        return False
+    return time_now - reading_time > timedelta(hours=max_age_hours)
+
+
+def _parse_probes(data: dict[str, Any], max_age_hours: float = 0) -> list[dict[str, Any]]:
+    """Parse the /tempprobes DataAPI response into a list of probe dicts.
+
+    Args:
+        data: The JSON response from the /tempprobes endpoint, containing a "TempProbes" list.
+        max_age_hours: Blank the temperature of probes whose latest reading is older than this. Zero disables the check.
+
+    Returns:
+        A list of normalised probe dicts. The temperature is None if there is no current reading.
+    """
+    results: list[dict[str, Any]] = []
+    time_now = DateHelper.now()
     for item in data.get("TempProbes", []):
         temp_raw = item.get("Temperature")
+        if _is_reading_stale(item.get("LastReadingTime"), max_age_hours, time_now):
+            temp_raw = None
         results.append({
             "name": item.get("Name", ""),
             "display_name": item.get("DisplayName", item.get("Name", "")),
@@ -206,6 +238,7 @@ class TopicPowerController:
         access_key: str | None = None,
         refresh_interval_sec: int = 10,
         ups_name: str | None = None,
+        temp_probe_max_age_hours: float = 2,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._access_key = access_key
@@ -213,6 +246,7 @@ class TopicPowerController:
         self._logger = logger
         self._refresh_secs = max(5, int(refresh_interval_sec))
         self._ups_name = ups_name or None
+        self._temp_probe_max_age_hours = temp_probe_max_age_hours
         self._ups_name_warned = False
         self._ups_endpoint_warned = False
 
@@ -258,7 +292,7 @@ class TopicPowerController:
 
         outputs = _parse_outputs(outputs_raw if isinstance(outputs_raw, dict) else {})
         meters = _parse_meters(meters_raw if isinstance(meters_raw, dict) else {})
-        probes = _parse_probes(probes_raw if isinstance(probes_raw, dict) else {})
+        probes = _parse_probes(probes_raw if isinstance(probes_raw, dict) else {}, self._temp_probe_max_age_hours)
         ups = _parse_ups(ups_raw if isinstance(ups_raw, dict) else {})
         ups_selected = _select_ups(ups, self._ups_name)
         if self._ups_name and ups and ups_selected is None and not self._ups_name_warned:
