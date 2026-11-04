@@ -16,8 +16,9 @@ EnvironmentFile=/home/nick/.config/op/service-account-token
 Environment=PATH=/home/nick/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # Logging and restart behavior
-Restart=on-failure        # Only restart on non-zero exit code
-RestartSec=10             # Wait 10 seconds before restarting
+# Only restart on non-zero exit code and wait 10 seconds before restarting
+Restart=on-failure
+RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
