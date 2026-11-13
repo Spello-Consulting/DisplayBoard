@@ -456,7 +456,7 @@ requires-dist = [
     { name = "pre-commit", specifier = ">=4.5.1" },
     { name = "pytest", marker = "extra == 'all'", specifier = ">=9.1.1" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
-    { name = "sc-foundation-services", specifier = ">=3.3.0" },
+    { name = "sc-foundation-services", specifier = ">=3.6.2" },
     { name = "sc-weather", specifier = ">=3.0.1" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.41.0" },
 ]
@@ -1508,7 +1508,7 @@ wheels = [
 
 [[package]]
 name = "sc-foundation-services"
-version = "3.3.0"
+version = "3.6.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "astral" },
@@ -1524,9 +1524,9 @@ dependencies = [
     { name = "tzfpy" },
     { name = "validators" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4d/fd/6a0247c42de4a351597e608215e2bfea86c481a9d503308f527578e3eaec/sc_foundation_services-3.3.0.tar.gz", hash = "sha256:469481dff71fc633927178b6f6f1b8618406af0ff656948631caa7211cc98db9", size = 47224, upload-time = "2026-08-05T07:42:07.087Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1d/4e/6f58fad54d64a0a0127690d4b0f0a22f678c883938bb5b7152b533481090/sc_foundation_services-3.6.2.tar.gz", hash = "sha256:7a62abbb835063111c1db669d073966a2fa7f1979939d4e48dd8a7a4bdff9ae8", size = 62209, upload-time = "2026-11-13T22:47:47.101Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/48/35/06dfe23d85393ecb2424c32700251b9b3f477719105ac95804a4a2966cf1/sc_foundation_services-3.3.0-py3-none-any.whl", hash = "sha256:ec18c05492e1e3672c6a7c43c9d6959ffb4b8a92f00a417641803c07bda3e60c", size = 38449, upload-time = "2026-08-05T07:42:05.775Z" },
+    { url = "https://files.pythonhosted.org/packages/84/ac/efb9cb21c42e5bb9e64076b47a746c0e5ab30782fb097455d38e63b7ba5d/sc_foundation_services-3.6.2-py3-none-any.whl", hash = "sha256:35e985e290b2678f392f731f761fb227ea9bed540efd9111d84342465c71ff59", size = 45573, upload-time = "2026-11-13T22:47:45.915Z" },
 ]
 
 [[package]]
