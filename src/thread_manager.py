@@ -143,13 +143,13 @@ class ThreadManager:
         self.logger.log_fatal_error(f"Thread [{thread_name}] crashed fatally. Shutting down application.", report_stack=True)
         os._exit(1)
 
-    def start_all(self):
+    def start_all(self) -> None:
         """Set the stop_event for each thread."""
         with self._lock:
             for t in self._threads:
                 t.start()
 
-    def stop_all(self):
+    def stop_all(self) -> None:
         with self._lock:  # noqa: PLR1702
             for t in self._threads:
                 # Signal cooperative stop

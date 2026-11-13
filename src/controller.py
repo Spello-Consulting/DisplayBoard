@@ -3,7 +3,7 @@ import contextlib
 import queue
 import time
 from collections.abc import Callable
-from threading import Event, RLock
+from threading import Event, Lock, RLock
 from typing import TYPE_CHECKING
 
 from sc_foundation import (
@@ -47,6 +47,10 @@ class AppController:
         # Setup the environment
         self.last_tick_time = DateHelper.now()
         self._io_shutdown_lock = RLock()  # Serialize writes during shutdown
+        # shutdown() can be reached from both the controller thread (run() exit) and the main
+        # thread (ThreadManager.stop_all()), so only the first call may do any work.
+        self._shutdown_lock = Lock()
+        self._shutdown_done = False
 
         # Optional callback used to notify the webapp (WebSocket) layer that new data is available
         # This is set by main.py once the ASGI webapp is initialised.
@@ -138,8 +142,27 @@ class AppController:
 
         self.shutdown()
 
-    def shutdown(self):
-        """Shutdown the power controller, turning off outputs if configured to do so."""
+    def stop(self) -> None:
+        """Wake the main loop so it can see the stop event and exit.
+
+        ThreadManager.stop_all() calls the first of stop()/shutdown()/close() it finds on the
+        instance behind a thread target. Providing stop() means stop_all() never calls
+        shutdown() directly. Do not call shutdown() or do any cleanup here: run() calls
+        shutdown() itself when its loop exits.
+        """
+        self.wake_event.set()
+
+    def shutdown(self) -> None:
+        """Shut down the controller.
+
+        Safe to call more than once and from several threads at the same time: only the
+        first call does any work.
+        """
+        with self._shutdown_lock:
+            if self._shutdown_done:
+                return
+            self._shutdown_done = True
+
         with self._io_shutdown_lock:
             self.logger.log_message("Starting Controller shutdown...", "debug")
             # TO DO: Shutdown tasks
