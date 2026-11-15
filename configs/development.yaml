@@ -69,6 +69,7 @@ TopicWeather:
   IconStyle: "cropped"  # Whether to use cropped or uncropped icons. One of "cropped" or "uncropped". The default is "cropped".
 
 
+
 # Configure the base URL and port to query a PowerController DataAPI service. This app will automatically add the relevant endpoints to the base URL (e.g. http://localhost:8081/outputs)
 TopicPowerController:
   RefreshIntervalSec: 10  # How often to refresh the power controller data (in seconds). 
