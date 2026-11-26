@@ -1,12 +1,14 @@
 """Tests that board pages load current static assets and survive an out of date board.js."""
 from __future__ import annotations
 
+import threading
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
 
+import webapp
 from webapp import _get_static_version, create_asgi_app  # noqa: PLC2701
 
 if TYPE_CHECKING:
@@ -57,3 +59,41 @@ def test_browser_refresh_is_scheduled_after_topic_handlers(template: str) -> Non
     """An error scheduling the refresh can't stop the topic handlers from being registered."""
     page = _get_page(template)
     assert page.rfind("BoardClient.onTopic(") < page.index("scheduleBrowserRefresh(")
+
+
+def test_serve_configures_bounded_graceful_shutdown(monkeypatch: pytest.MonkeyPatch) -> None:
+    """serve_asgi_blocking builds uvicorn with a bounded graceful-shutdown timeout.
+
+    The web server runs in a non-daemon thread. If uvicorn is left with an unbounded
+    graceful-shutdown timeout, a lingering WebSocket connection (e.g. an open dashboard)
+    keeps that thread alive indefinitely and blocks the whole process from exiting until
+    it is SIGKILLed. ``serve_asgi_blocking`` must give uvicorn a bounded timeout.
+    """
+    captured: dict[str, Any] = {}
+
+    class _FakeServer:
+        def __init__(self, config: Any) -> None:
+            captured["config"] = config
+            self.should_exit = False
+
+        def install_signal_handlers(self) -> None:  # pragma: no cover - replaced at runtime
+            pass
+
+        async def serve(self) -> None:  # noqa: PLR6301 - mirrors uvicorn.Server.serve
+            return None
+
+    monkeypatch.setattr(webapp.uvicorn, "Server", _FakeServer)
+
+    values: dict[tuple[str, str], Any] = {}
+    config = MagicMock()
+    config.get.side_effect = lambda section, key=None, default=None: values.get((section, key), default)
+
+    stop_event = threading.Event()
+    stop_event.set()  # resolve the stop watcher immediately
+
+    webapp.serve_asgi_blocking(MagicMock(), config, MagicMock(), stop_event)
+
+    uv_config = captured["config"]
+    assert uv_config.timeout_graceful_shutdown is not None, "uvicorn must have a bounded graceful-shutdown timeout"
+    assert uv_config.timeout_graceful_shutdown == int(webapp.WEB_SERVER_GRACEFUL_SHUTDOWN_TIMEOUT)
+    assert 0 < uv_config.timeout_graceful_shutdown <= 30
